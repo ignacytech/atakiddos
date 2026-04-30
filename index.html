@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ochrona przed atakami DDoS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+  />
+  <style>
+    :root {
+      --bg: #040814;
+      --bg-soft: rgba(10, 20, 38, 0.78);
+      --bg-panel: rgba(9, 18, 34, 0.72);
+      --line: rgba(111, 255, 241, 0.16);
+      --line-strong: rgba(111, 255, 241, 0.38);
+      --text: #ebf7ff;
+      --muted: #9ec6da;
+      --accent: #38f3ff;
+      --accent-2: #6d8bff;
+      --danger: #ff5d8f;
+      --shadow: 0 0 24px rgba(56, 243, 255, 0.18);
+      --radius: 28px;
+      --radius-sm: 18px;
+      --content-height: auto;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(109, 139, 255, 0.2), transparent 34%),
+        radial-gradient(circle at 82% 12%, rgba(56, 243, 255, 0.18), transparent 26%),
+        radial-gradient(circle at 50% 120%, rgba(56, 243, 255, 0.16), transparent 30%),
+        linear-gradient(160deg, #02050d 0%, #071221 48%, #030712 100%);
+      overflow-x: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    body::before {
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(circle at center, black 45%, transparent 95%);
+      opacity: 0.55;
+      animation: gridPulse 10s ease-in-out infinite alternate;
+    }
+
+    body::after {
+      z-index: -1;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(56, 243, 255, 0.16), transparent 22%),
+        radial-gradient(circle at 80% 30%, rgba(109, 139, 255, 0.18), transparent 24%),
+        radial-gradient(circle at 50% 80%, rgba(56, 243, 255, 0.12), transparent 25%);
+      filter: blur(28px);
+      animation: glowDrift 16s ease-in-out infinite alternate;
+    }
+
+    .layout {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 40px clamp(22px, 4vw, 42px);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(10, 22, 42, 0.8), rgba(7, 14, 28, 0.7));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 22px 60px rgba(2, 10, 20, 0.55),
+        var(--shadow);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(18px);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .hero::before {
+      top: -40px;
+      right: 10%;
+      width: 180px;
+      height: 180px;
+      background: rgba(56, 243, 255, 0.22);
+    }
+
+    .hero::after {
+      bottom: -55px;
+      left: 8%;
+      width: 210px;
+      height: 210px;
+      background: rgba(109, 139, 255, 0.18);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border: 1px solid rgba(56, 243, 255, 0.25);
+      border-radius: 999px;
+      background: rgba(7, 18, 34, 0.72);
+      color: var(--accent);
+      font-size: 0.86rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02), 0 0 18px rgba(56, 243, 255, 0.12);
+    }
+
+    h1 {
+      margin: 18px 0 14px;
+      font-family: "Orbitron", "Segoe UI", sans-serif;
+      font-size: clamp(2.2rem, 5vw, 4.5rem);
+      line-height: 1.03;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-shadow: 0 0 24px rgba(56, 243, 255, 0.16);
+    }
+
+    .hero p {
+      max-width: 760px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.12rem);
+      line-height: 1.8;
+    }
+
+    .tabs-shell {
+      margin-top: 24px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(8, 15, 29, 0.7);
+      box-shadow: 0 18px 40px rgba(3, 9, 18, 0.45);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .tab-button {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 72px;
+      padding: 15px 18px;
+      border: 1px solid rgba(56, 243, 255, 0.14);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(13, 23, 41, 0.82), rgba(8, 16, 30, 0.68));
+      color: var(--muted);
+      font: inherit;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+      transition:
+        transform 0.28s ease,
+        border-color 0.28s ease,
+        box-shadow 0.28s ease,
+        color 0.28s ease,
+        background 0.28s ease;
+    }
+
+    .tab-button i {
+      font-size: 1rem;
+      color: var(--accent);
+      filter: drop-shadow(0 0 10px rgba(56, 243, 255, 0.28));
+    }
+
+    .tab-button:hover,
+    .tab-button:focus-visible {
+      transform: translateY(-3px);
+      color: var(--text);
+      border-color: rgba(56, 243, 255, 0.34);
+      box-shadow: 0 12px 28px rgba(2, 18, 34, 0.34), 0 0 0 1px rgba(56, 243, 255, 0.18);
+      outline: none;
+    }
+
+    .tab-button.is-active {
+      color: var(--text);
+      border-color: rgba(56, 243, 255, 0.5);
+      background: linear-gradient(180deg, rgba(17, 34, 61, 0.94), rgba(8, 20, 36, 0.82));
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+        0 0 0 1px rgba(56, 243, 255, 0.12),
+        0 12px 28px rgba(3, 18, 36, 0.35),
+        0 0 24px rgba(56, 243, 255, 0.18);
+    }
+
+    .tab-button.is-active::after {
+      content: "";
+      position: absolute;
+      inset: auto 18px 10px;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      box-shadow: 0 0 18px rgba(56, 243, 255, 0.6);
+    }
+
+    .content-shell {
+      margin-top: 20px;
+      padding: 0; /* Usunięto padding, aby ramki paneli były wyrównane z krawędzią */
+      border: none; /* Usunięto zewnętrzną ramkę */
+      background: transparent; /* Usunięto tło, aby panele były głównym elementem */
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    .panels {
+      position: relative;
+      min-height: 460px;
+      height: var(--content-height);
+      transition: height 0.42s ease;
+    }
+
+    .panel {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+      gap: 22px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(20px) scale(0.985);
+      transform-origin: top center;
+      transition:
+        opacity 0.34s ease,
+        transform 0.42s ease,
+        visibility 0.34s ease;
+    }
+
+    .panel.is-active {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+
+    .panel-main,
+    .panel-side {
+      border: 1px solid var(--line-strong); /* Wzmocniona ramka dla lepszej widoczności */
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(9, 18, 34, 0.84), rgba(7, 13, 25, 0.72));
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+        0 20px 44px rgba(3, 9, 18, 0.52);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .panel-main {
+      padding: clamp(22px, 3vw, 30px);
+    }
+
+    .panel-side {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      justify-content: space-between;
+    }
+
+    .panel-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(56, 243, 255, 0.18);
+      color: var(--accent);
+      background: rgba(7, 18, 34, 0.6);
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-family: "Orbitron", "Segoe UI", sans-serif;
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      line-height: 1.2;
+      color: var(--text);
+    }
+
+    p {
+      margin: 0 0 20px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .grid-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .info-card {
+      padding: 18px;
+      border: 1px solid rgba(56, 243, 255, 0.1);
+      border-radius: var(--radius-sm);
+      background: rgba(10, 20, 38, 0.4);
+      transition: transform 0.2s ease;
+    }
+
+    .info-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(56, 243, 255, 0.2);
+    }
+
+    .info-card i {
+      font-size: 1.4rem;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .info-card h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      color: var(--text);
+    }
+
+    .info-card p {
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .signal-box {
+      padding: 18px;
+      border-radius: var(--radius-sm);
+      background: rgba(56, 243, 255, 0.05);
+      border: 1px solid rgba(56, 243, 255, 0.12);
+    }
+
+    .signal-box h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+    }
+
+    .signal-box ul {
+      margin: 0;
+      padding: 0 0 0 18px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .signal-box li {
+      margin-bottom: 6px;
+    }
+
+    .side-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .stat-pill {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      font-size: 0.85rem;
+    }
+
+    .stat-pill span {
+      color: var(--muted);
+    }
+
+    .stat-pill strong {
+      color: var(--accent);
+    }
+
+    .alert-box {
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(255, 93, 143, 0.08);
+      border: 1px solid rgba(255, 93, 143, 0.2);
+    }
+
+    .alert-box h3 {
+      margin: 0 0 6px;
+      font-size: 0.85rem;
+      color: var(--danger);
+      text-transform: uppercase;
+    }
+
+    .alert-box p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--text);
+    }
+
+    @keyframes gridPulse {
+      from {
+        opacity: 0.4;
+        transform: scale(1);
+      }
+      to {
+        opacity: 0.62;
+        transform: scale(1.05);
+      }
+    }
+
+    @keyframes glowDrift {
+      from {
+        transform: translate3d(-2%, 0, 0) scale(1);
+      }
+      to {
+        transform: translate3d(2%, -2%, 0) scale(1.06);
+      }
+    }
+
+    @media (max-width: 1040px) {
+      .tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .panel {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-side {
+        gap: 16px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .layout {
+        width: min(100% - 20px, 1180px);
+        padding: 18px 0 28px;
+      }
+
+      .hero {
+        padding: 26px 18px;
+        border-radius: 24px;
+      }
+
+      .tabs-shell {
+        padding: 12px;
+      }
+
+      .panel-main,
+      .panel-side {
+        border-radius: 20px;
+      }
+
+      .panels {
+        min-height: 0;
+      }
+
+      .grid-list {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <header class="hero">
+      <div class="eyebrow">
+        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+        Panel cyberbezpieczeństwa
+      </div>
+      <h1>Ochrona przed atakami DDoS</h1>
+      <p>
+        Strona pokazuje, czym jest DDoS, jak chronić urządzenie i stronę oraz gdzie zgłosić atak.
+      </p>
+    </header>
+
+    <section class="tabs-shell" aria-label="Nawigacja sekcji">
+      <nav class="tabs" role="tablist" aria-label="Zakładki edukacyjne">
+        <button class="tab-button is-active" role="tab" type="button" id="tab-ddos" aria-controls="panel-ddos" aria-selected="true" data-target="panel-ddos">
+          <i class="fa-solid fa-burst" aria-hidden="true"></i>
+          <span>Czym są ataki DDoS</span>
+        </button>
+        <button class="tab-button" role="tab" type="button" id="tab-botnet" aria-controls="panel-botnet" aria-selected="false" data-target="panel-botnet">
+          <i class="fa-solid fa-user-shield" aria-hidden="true"></i>
+          <span>Jak uniknąć botnetu</span>
+        </button>
+        <button class="tab-button" role="tab" type="button" id="tab-admin" aria-controls="panel-admin" aria-selected="false" data-target="panel-admin">
+          <i class="fa-solid fa-server" aria-hidden="true"></i>
+          <span>Jak chronić swoją stronę</span>
+        </button>
+        <button class="tab-button" role="tab" type="button" id="tab-report" aria-controls="panel-report" aria-selected="false" data-target="panel-report">
+          <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i>
+          <span>Gdzie zgłaszać atak</span>
+        </button>
+      </nav>
+    </section>
+
+    <main class="content-shell">
+      <div class="panels" id="panels">
+        <section class="panel is-active" id="panel-ddos" role="tabpanel" aria-labelledby="tab-ddos">
+          <div class="panel-main">
+            <div class="panel-label">
+              <i class="fa-solid fa-radar" aria-hidden="true"></i>
+              Sekcja 01
+            </div>
+            <h2>Czym są ataki DDoS</h2>
+            <p>
+              DDoS to zalanie serwera ogromną liczbą żądań z wielu urządzeń naraz.
+            </p>
+
+            <div class="grid-list">
+              <article class="info-card">
+                <i class="fa-solid fa-network-wired" aria-hidden="true"></i>
+                <h3>Wiele źródeł ruchu</h3>
+                <p>
+                  Atak najczęściej pochodzi z botnetu.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+                <h3>Przeciążenie zasobów</h3>
+                <p>
+                  Atak przeciąża łącze i serwer.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                <h3>Skutki dla ofiary</h3>
+                <p>
+                  Strona zwalnia lub całkowicie przestaje działać.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-wave-square" aria-hidden="true"></i>
+                <h3>Cel ataku</h3>
+                <p>
+                  Celem ataku jest zablokowanie dostępu do usługi.
+                </p>
+              </article>
+            </div>
+          </div>
+
+          <aside class="panel-side">
+            <div class="signal-box">
+              <h3>Jak rozpoznać problem</h3>
+              <p>
+                Typowe sygnały to nagły skok ruchu i błędy strony.
+              </p>
+              <ul>
+                <li>W krótkim czasie pojawia się bardzo dużo połączeń.</li>
+                <li>Na stronie pojawiają się błędy 502 lub 503.</li>
+                <li>Ruch pochodzi z nietypowych adresów IP.</li>
+              </ul>
+            </div>
+
+            <div class="side-stats">
+              <div class="stat-pill">
+                <span>Rodzaj zagrożenia</span>
+                <strong>DoS / DDoS</strong>
+              </div>
+              <div class="stat-pill">
+                <span>Główny cel</span>
+                <strong>Niedostępność</strong>
+              </div>
+              <div class="stat-pill">
+                <span>Metoda</span>
+                <strong>Masowe żądania</strong>
+              </div>
+            </div>
+
+            <div class="alert-box">
+              <h3>Ważne</h3>
+              <p>
+                Sam wzrost ruchu nie zawsze oznacza atak DDoS.
+              </p>
+            </div>
+          </aside>
+        </section>
+
+        <section class="panel" id="panel-botnet" role="tabpanel" aria-labelledby="tab-botnet" aria-hidden="true">
+          <div class="panel-main">
+            <div class="panel-label">
+              <i class="fa-solid fa-user-lock" aria-hidden="true"></i>
+              Sekcja 02
+            </div>
+            <h2>Jak się chronić przed byciem częścią botnetu - użytkownicy</h2>
+            <p>
+              Zainfekowane urządzenie może uczestniczyć w ataku bez wiedzy właściciela.
+            </p>
+
+            <div class="grid-list">
+              <article class="info-card">
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                <h3>Aktualizacje systemu</h3>
+                <p>
+                  Regularnie aktualizuj system, router i aplikacje.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-shield-virus" aria-hidden="true"></i>
+                <h3>Antywirus i ochrona</h3>
+                <p>
+                  Używaj antywirusa i skanuj urządzenie.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-link-slash" aria-hidden="true"></i>
+                <h3>Unikaj podejrzanych linków</h3>
+                <p>
+                  Nie klikaj w podejrzane linki i wiadomości.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-key" aria-hidden="true"></i>
+                <h3>Silne hasła</h3>
+                <p>
+                  Stosuj silne hasła i włącz MFA.
+                </p>
+              </article>
+            </div>
+          </div>
+
+          <aside class="panel-side">
+            <div class="signal-box">
+              <h3>Checklista bezpieczeństwa</h3>
+              <ul>
+                <li>Zmień domyślne hasło do routera.</li>
+                <li>Wyłącz niepotrzebny zdalny dostęp.</li>
+                <li>Instaluj programy tylko z zaufanych źródeł.</li>
+              </ul>
+            </div>
+
+            <div class="side-stats">
+              <div class="stat-pill">
+                <span>Najczęstszy błąd</span>
+                <strong>Brak aktualizacji</strong>
+              </div>
+              <div class="stat-pill">
+                <span>Pierwsza linia obrony</span>
+                <strong>Higiena cyfrowa</strong>
+              </div>
+              <div class="stat-pill">
+                <span>Priorytet</span>
+                <strong>Router + poczta</strong>
+              </div>
+            </div>
+
+            <div class="alert-box">
+              <h3>Objawy infekcji</h3>
+              <p>
+                Niepokojące są spowolnienia i dziwny ruch sieciowy.
+              </p>
+            </div>
+          </aside>
+        </section>
+
+        <section class="panel" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin" aria-hidden="true">
+          <div class="panel-main">
+            <div class="panel-label">
+              <i class="fa-solid fa-shield-heart" aria-hidden="true"></i>
+              Sekcja 03
+            </div>
+            <h2>Jak chronić swoją stronę internetową - administratorzy stron</h2>
+            <p>
+              Najlepiej działa ochrona oparta na kilku warstwach.
+            </p>
+
+            <div class="grid-list">
+              <article class="info-card">
+                <i class="fa-solid fa-cloud" aria-hidden="true"></i>
+                <h3>Cloudflare lub podobna usługa</h3>
+                <p>
+                  Taka usługa filtruje ruch i ukrywa IP serwera.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-fire-flame-curved" aria-hidden="true"></i>
+                <h3>Firewall</h3>
+                <p>
+                  Firewall pomaga blokować złośliwy ruch.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                <h3>Rate limiting</h3>
+                <p>
+                  Warto ograniczyć liczbę żądań na IP.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+                <h3>Monitoring i aktualizacje</h3>
+                <p>
+                  Alerty wykrywają skoki ruchu, a poprawki zamykają luki.
+                </p>
+              </article>
+            </div>
+          </div>
+
+          <aside class="panel-side">
+            <div class="signal-box">
+              <h3>Plan reakcji</h3>
+              <ul>
+                <li>Miej przygotowany kontakt do hostingu.</li>
+                <li>Ustaw alerty dotyczące ruchu.</li>
+                <li>Dbaj o aktualny CMS i wtyczki.</li>
+              </ul>
+            </div>
+
+            <div class="side-stats">
+              <div class="stat-pill">
+                <span>Ochrona brzegowa</span>
+                <strong>CDN / Proxy</strong>
+              </div>
+              <div class="stat-pill">
+                <span>Kontrola ruchu</span>
+                <strong>Rate limiting</strong>
+              </div>
+              <div class="stat-pill">
+                <span>Wykrywanie</span>
+                <strong>Monitoring</strong>
+              </div>
+            </div>
+
+            <div class="alert-box">
+              <h3>Dobra praktyka</h3>
+              <p>
+                Zabezpieczenia należy wdrożyć przed atakiem.
+              </p>
+            </div>
+          </aside>
+        </section>
+
+        <section class="panel" id="panel-report" role="tabpanel" aria-labelledby="tab-report" aria-hidden="true">
+          <div class="panel-main">
+            <div class="panel-label">
+              <i class="fa-solid fa-bell" aria-hidden="true"></i>
+              Sekcja 04
+            </div>
+            <h2>Gdzie zgłaszać atak na swoją stronę - administratorzy</h2>
+            <p>
+              W czasie ataku liczy się szybkie zgłoszenie i zebranie logów.
+            </p>
+
+            <div class="grid-list">
+              <article class="info-card">
+                <i class="fa-solid fa-building-shield" aria-hidden="true"></i>
+                <h3>1. Hosting lub dostawca infrastruktury</h3>
+                <p>
+                  To powinien być pierwszy kontakt podczas incydentu.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-user-secret" aria-hidden="true"></i>
+                <h3>2. CERT Polska</h3>
+                <p>
+                  CERT Polska zapewnia wsparcie eksperckie.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+                <h3>3. Policja przy szkodach</h3>
+                <p>
+                  Policję warto powiadomić przy szkodach i groźbach.
+                </p>
+              </article>
+              <article class="info-card">
+                <i class="fa-solid fa-folder-tree" aria-hidden="true"></i>
+                <h3>Na końcu przygotuj</h3>
+                <p>
+                  Warto przygotować logi, adresy IP i godziny zdarzeń.
+                </p>
+              </article>
+            </div>
+          </div>
+
+          <aside class="panel-side">
+            <div class="signal-box">
+              <h3>Szybka ścieżka reakcji</h3>
+              <ul>
+                <li>Najpierw powiadom hosting.</li>
+                <li>Następnie zgłoś incydent do CERT Polska.</li>
+                <li>W razie szkody skontaktuj się z policją.</li>
+                <li>Na końcu przygotuj logi, adresy IP i godziny zdarzeń.</li>
+              </ul>
+            </div>
+
+            <div class="side-stats">
+              <div class="stat-pill">
+                <span>Pierwszy kontakt</span>
+                <strong>Hosting</strong>
+              </div>
+              <div class="stat-pill">
+                <span>Wsparcie eksperckie</span>
+                <strong>CERT Polska</strong>
+              </div>
+              <div class="stat-pill">
+                <span>Przy szkodach</span>
+                <strong>Policja</strong>
+              </div>
+            </div>
+
+            <div class="alert-box">
+              <h3>Wskazówka praktyczna</h3>
+              <p>
+                Dobrze zebrane logi wyraźnie przyspieszają reakcję.
+              </p>
+            </div>
+          </aside>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
+    const panels = Array.from(document.querySelectorAll(".panel"));
+    const panelsWrapper = document.getElementById("panels");
+
+    const setPanelsHeight = (panel) => {
+      if (!panel) return;
+      panelsWrapper.style.setProperty("--content-height", panel.offsetHeight + "px");
+    };
+
+    const activatePanel = (targetId) => {
+      const nextButton = tabButtons.find((button) => button.dataset.target === targetId);
+      const nextPanel = panels.find((panel) => panel.id === targetId);
+
+      if (!nextButton || !nextPanel || nextButton.classList.contains("is-active")) {
+        return;
+      }
+
+      tabButtons.forEach((button) => {
+        const isActive = button === nextButton;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-selected", String(isActive));
+        button.setAttribute("tabindex", isActive ? "0" : "-1");
+      });
+
+      panels.forEach((panel) => {
+        const isActive = panel === nextPanel;
+        panel.classList.toggle("is-active", isActive);
+        panel.setAttribute("aria-hidden", String(!isActive));
+      });
+
+      setPanelsHeight(nextPanel);
+    };
+
+    tabButtons.forEach((button, index) => {
+      button.setAttribute("tabindex", index === 0 ? "0" : "-1");
+
+      button.addEventListener("click", () => {
+        activatePanel(button.dataset.target);
+      });
+
+      button.addEventListener("keydown", (event) => {
+        const currentIndex = tabButtons.indexOf(button);
+        let nextIndex = currentIndex;
+
+        if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+          nextIndex = (currentIndex + 1) % tabButtons.length;
+        }
+
+        if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+          nextIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
+        }
+
+        if (nextIndex !== currentIndex) {
+          event.preventDefault();
+          tabButtons[nextIndex].focus();
+          activatePanel(tabButtons[nextIndex].dataset.target);
+        }
+      });
+    });
+
+    const activePanel = document.querySelector(".panel.is-active");
+    setPanelsHeight(activePanel);
+
+    window.addEventListener("resize", () => {
+      setPanelsHeight(document.querySelector(".panel.is-active"));
+    });
+
+    if ("ResizeObserver" in window) {
+      const resizeObserver = new ResizeObserver(() => {
+        setPanelsHeight(document.querySelector(".panel.is-active"));
+      });
+
+      panels.forEach((panel) => resizeObserver.observe(panel));
+    }
+  </script>
+</body>
+</html>
